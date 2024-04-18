@@ -13,7 +13,7 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
 
-    let todos = vec![
+    let mut todos = vec![
         "Help menu",
         "Adding items",
         "Editing items",
@@ -44,16 +44,19 @@ fn main() -> Result<()> {
                     match key.code {
                         KeyCode::Char('q') => break,
                         KeyCode::Char('k') => {
-                            let selected = state.selected().unwrap_or_default();
-                            state.select(Some(if selected == 0 { 0 } else { selected - 1 }))
+                            select_previous(&mut state);
                         }
                         KeyCode::Char('j') => {
-                            let selected = state.selected().unwrap_or_default();
-                            state.select(Some(if selected >= todos.len() - 1 {
-                                todos.len() - 1
+                            select_next(&mut state, &todos);
+                        }
+                        KeyCode::Char('d') if state.selected().is_none() => {}
+                        KeyCode::Char('d') => {
+                            todos.remove(state.selected().unwrap_or(todos.len() + 1));
+                            if todos.len() != 0 {
+                                select_previous(&mut state);
                             } else {
-                                selected + 1
-                            }))
+                                state.select(None);
+                            }
                         }
                         _ => {}
                     }
@@ -65,4 +68,22 @@ fn main() -> Result<()> {
     stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
     Ok(())
+}
+
+fn select_next(state: &mut ListState, todos: &Vec<&str>) {
+    if let Some(selection) = state.selected() {
+        state.select(Some(if selection >= todos.len() - 1 {
+            todos.len() - 1
+        } else {
+            selection + 1
+        }))
+    }
+}
+
+fn select_previous(state: &mut ListState) {
+    if let Some(selection) = state.selected() {
+        state.select(Some(if selection == 0 { 0 } else { selection - 1 }))
+    } else {
+        return;
+    }
 }
